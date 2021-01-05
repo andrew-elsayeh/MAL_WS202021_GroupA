@@ -29,7 +29,7 @@ class ServerCallbacks: public BLEServerCallbacks {
       deviceConnected = false;
     }
 };
-
+//Part of the initialized code, not sure what this is for
 class charCallbacks: 
   public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic *pCharacteristic) {
@@ -69,7 +69,7 @@ void loop() {
   anchorPing = *(dacCharacteristic.getData());
   if(deviceConnected == true) {
     Serial.println(anchorPing);
-    // BLECharacteristics setValue() i haven't figured it out how to set to 0, but setting value to "0" gives me the value 48 (it's ascii)
+    // BLECharacteristics setValue() i haven't figured it out how to set to 0, but setting value to "0" gives me the value 48 (it's ascii) (init at line 60)
     if(anchorPing != 48 ) {
 
       dacWrite(dacPin1, 255);
