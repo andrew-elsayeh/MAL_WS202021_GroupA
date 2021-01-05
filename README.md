@@ -11,10 +11,10 @@ Prerequisits:
 Setup:
 1. Clone the repository your computer 
 ```
-https://github.com/andrew-elsayeh/MAL_WS202021_GroupA.git
+git clone https://github.com/andrew-elsayeh/MAL_WS202021_GroupA.git
 ```
 2. Open the firmware folder you want to flash in VSCode 
->Example: (Welcome Page -> Open Folder -> MAL_Tag_Firmare
+> Example: (Welcome Page -> Open Folder -> MAL_Tag_Firmare
 
 3. While your board is connected, click on the flash icon from platformio (bottom left), platformio will do the rest. First time might take a while to install required tools for flashing
 
