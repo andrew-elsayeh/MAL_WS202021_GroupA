@@ -3,7 +3,7 @@
 This repository contains the 2 platformio projects. One for the Tags (M5StickC) and one for the Anchor (M5Stack Core)
 
 
-### Getting Started 
+## Getting Started 
 Prerequisits:
 * Install git on your computer
 
