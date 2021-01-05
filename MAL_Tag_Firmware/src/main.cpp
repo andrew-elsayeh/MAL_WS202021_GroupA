@@ -3,16 +3,15 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 #include <Arduino.h>
-
+// define UUIDs
 #define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 #define dacPin1 25
-
+//Variable init
 bool deviceConnected = false;
 uint8_t anchorPing = 0;
-/* Define the UUID for our Custom Service */
 
-
+//our characteristic
 BLECharacteristic dacCharacteristic(
   BLEUUID(CHARACTERISTIC_UUID), 
   BLECharacteristic::PROPERTY_READ | 
