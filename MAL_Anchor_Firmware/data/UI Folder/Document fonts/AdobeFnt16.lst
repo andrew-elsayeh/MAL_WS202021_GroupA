@@ -1,0 +1,45 @@
+%!Adobe-FontList 1.16
+%Locale:0x409
+
+%BeginFont
+Handler:DirectoryHandler
+FontType:TrueType
+FontName:Verdana
+FamilyName:Verdana
+StyleName:Regular
+FullName:Verdana
+MenuName:Verdana
+StyleBits:0
+WritingScript:Roman
+OutlineFileName:C:\Users\begs\Desktop\MAL\UI Folder\Document fonts\verdana.ttf
+DataFormat:sfntData
+FileLength:243304
+FileModTime:1552970651
+WeightClass:400
+WidthClass:5
+AngleClass:0
+NameArray:0,Mac,4,Verdana
+NameArray:0,Win,1,Verdana
+%EndFont
+
+%BeginFont
+Handler:DirectoryHandler
+FontType:TrueType
+FontName:Verdana-Bold
+FamilyName:Verdana
+StyleName:Bold
+FullName:Verdana Bold
+MenuName:Verdana
+StyleBits:2
+WritingScript:Roman
+OutlineFileName:C:\Users\begs\Desktop\MAL\UI Folder\Document fonts\verdanab.ttf
+DataFormat:sfntData
+FileLength:211260
+FileModTime:1552970651
+WeightClass:700
+WidthClass:5
+AngleClass:0
+NameArray:0,Mac,4,Verdana Bold
+NameArray:0,Win,1,Verdana
+%EndFont
+
