@@ -17,10 +17,8 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "freertos/event_groups.h"
 
 #include "esp_system.h"
-#include "esp_wifi.h"
 #include "esp_log.h"
 #include "esp_vfs_fat.h"
 #include "driver/sdmmc_host.h"
@@ -81,6 +79,9 @@ QueueHandle_t GUI_Queue = NULL;
 #define STOP_RINGING 0x01
 #define START_RINGING 0x02
 
+#define ANIMATION_DELAY 150
+
+
 // =============================================================================
 // Global Variables
 // =============================================================================
@@ -140,7 +141,6 @@ static void vButtonHandler(void* arg)
     }
 }
 
-#define ANIMATION_DELAY 150
 void draw_ringing_animation(){
 
     if (xSemaphoreTake(ScreenLock, portMAX_DELAY) == pdTRUE){
