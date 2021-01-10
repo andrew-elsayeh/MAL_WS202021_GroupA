@@ -35,6 +35,6 @@ void draw_battery_indicator(uint8_t battery_level, bool isCharging);
 /*
  * Initalizes the display and draws the welcome screen
  */
-void initialize_display(void);
+esp_err_t initialize_display(void);
 
 #endif /* GUI_H */

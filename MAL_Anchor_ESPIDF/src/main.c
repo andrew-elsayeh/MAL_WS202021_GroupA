@@ -53,7 +53,7 @@ SemaphoreHandle_t ScreenLock = NULL;
 // =============================================================================
 // Queues
 // =============================================================================
-QueueHandle_t button_events = NULL;
+QueueHandle_t Buttons_Queue = NULL;
 QueueHandle_t GUI_Queue = NULL;
 
 
@@ -120,7 +120,7 @@ static void vButtonHandler(void* arg)
     bool RingingState = false;
 
     while (true) {
-        if (xQueueReceive(button_events, &ButtonEvent, 1000/portTICK_PERIOD_MS) == pdTRUE) {
+        if (xQueueReceive(Buttons_Queue, &ButtonEvent, 1000/portTICK_PERIOD_MS) == pdTRUE) {
             if (ButtonEvent.event == BUTTON_DOWN){
 
                 if ((ButtonEvent.pin == BUTTON_A) && (ButtonEvent.event == BUTTON_DOWN)) {
@@ -309,7 +309,7 @@ static esp_err_t i2c_master_init()
 #define IP5306_REG_CHG_DIG  (0x24) 
 
 
-void initialize_power_management(void)
+esp_err_t initialize_power_management(void)
 {
     Power_begin();
     
@@ -325,25 +325,25 @@ void initialize_power_management(void)
     
     Power_readByte(IP5306_ADDR, IP5306_REG_SYS_CTL2, &data);
     printf("CTL2: %d\n\r",data);
+
+    return ESP_OK;
 }
 
 void app_main() {
-    initialize_power_management();
-
-    ESP_ERROR_CHECK( initialize_spiffs() );
     
+    ESP_ERROR_CHECK( initialize_power_management() );
+    ESP_ERROR_CHECK( initialize_spiffs() );
     ESP_ERROR_CHECK( i2c_master_init() );
-
-    /**** Initialize Display and SPI-Driver and displays the welcome screen ****/
-    initialize_display();
-
+    ESP_ERROR_CHECK( initialize_display()); 
 
     /* 
      * Initializes Buttons and returns a handle to the queue where debounced 
      * button events are sent
      */
-    button_events = button_init(PIN_BIT(BUTTON_A) | PIN_BIT(BUTTON_B) | PIN_BIT(BUTTON_C));
-
+    Buttons_Queue = button_init(PIN_BIT(BUTTON_A) | PIN_BIT(BUTTON_B) | PIN_BIT(BUTTON_C));
+    if (!Buttons_Queue){
+        ESP_LOGE(TAG, "Failed to create buttons queue");
+    }
     ScreenLock = xSemaphoreCreateMutex();
     if (!ScreenLock){
         ESP_LOGE(TAG, "Failed to create screen lock");
@@ -351,7 +351,7 @@ void app_main() {
 
     GUI_Queue = xQueueCreate(GUI_QUEUE_LENGTH, sizeof(GUI_action_t));
     if (!GUI_Queue){
-        ESP_LOGE(TAG, "Failed to create screen lock");
+        ESP_LOGE(TAG, "Failed to create GUI queue");
     }
     
     xTaskCreate(vButtonHandler, "Button Handler", 2048, NULL, configMAX_PRIORITIES - 1 , &ButtonHandler);

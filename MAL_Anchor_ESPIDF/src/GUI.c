@@ -55,7 +55,7 @@ void draw_battery_indicator(uint8_t battery_level, bool isCharging)
 }
 
 
-void initialize_display(void)
+esp_err_t initialize_display(void)
 {
     esp_err_t err;
 
@@ -132,7 +132,7 @@ void initialize_display(void)
     FILE* f = fopen("/spiffs/welcome.jpg", "r");
     if (f == NULL) {
         ESP_LOGE(TAG, "Failed to open welcome.jpg");
-        return;
+        return ESP_FAIL;
     }
     fclose(f);
     
@@ -142,5 +142,5 @@ void initialize_display(void)
     vTaskDelay(100/portTICK_RATE_MS);
     tft_fg = TFT_BLACK;
     tft_bg = TFT_WHITE;
-
+    return ESP_OK;
 }
