@@ -2,16 +2,16 @@
 
 This repository contains the 2 platformio projects. One for the Tags (M5StickC) and one for the Anchor (M5Stack Core)
 
-##
 
-  /* Routine description
+
+## Routine description
 
       1. Stay connected with all 3 tags
       2. onDisconnect do Anchor rescan
       3. when nConnectedTags == nTags stop scan stop advertise
       4. For tags on disconnect -> start advertise
 
-  */
+
 
 ## Getting Started 
 Prerequisits:
