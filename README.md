@@ -6,10 +6,10 @@ This repository contains the 2 platformio projects. One for the Tags (M5StickC) 
 
 ## Routine description
 
-      1. Stay connected with all 3 tags
+      1. Scan and stay connected with all 3 tags
       2. onDisconnect do Anchor rescan
-      3. when nConnectedTags == nTags stop scan stop advertise
-      4. For tags on disconnect -> start advertise
+      3. when (nConnectedTags == nTags) -> Anchor stop scan.
+      4. For tags on disconnect -> Tag start advertise, connected ->stop
 
 
 
