@@ -201,9 +201,13 @@ static void vGUI_task(void* arg){
             switch (GUI_Action){
                 case (COUNT_DOWN):
                     Object--;
+                    RingingState = false;
+                    xTaskNotify(GUI_RingingAnimation, STOP_RINGING, eSetValueWithOverwrite);
                     break;
                 case (COUNT_UP):
                     Object++;
+                    RingingState = false;
+                    xTaskNotify(GUI_RingingAnimation, STOP_RINGING, eSetValueWithOverwrite);
                     break;
                 case (TOGGLE_RINGING):
                     RingingState = !RingingState;           //Toggle Ringing State
