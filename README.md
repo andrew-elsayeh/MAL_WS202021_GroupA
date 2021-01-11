@@ -4,7 +4,7 @@ This repository contains the 2 platformio projects. One for the Tags (M5StickC) 
 
 
 
-## Routine description
+## Anchor-Tag routine description
 
       1. Scan and stay connected with all 3 tags
       2. onDisconnect do Anchor rescan
