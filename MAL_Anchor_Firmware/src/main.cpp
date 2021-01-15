@@ -4,7 +4,7 @@
  * TODO: write to doAdvertiseUUID characteristic on tag to "0" 48 ascii
  */
 
-#include "BLEDevice.h"
+#include <BLEDevice.h>
 #include "BLEScan.h"
 #include <Arduino.h>
 #include <M5StickC.h>
@@ -20,12 +20,13 @@ static BLEUUID doAdvUUID("87e692ad-d2eb-4ef2-972d-f624f0ab7847");
 #define nTags 1
 #define SCAN_TIME 10
 
+bool isRoutineRunning=false;
 int nConnectedTags = 0;
 int counter=0;
+int connCounter=0;
 
-static boolean doConnect = false;
 static boolean allConnected = false;
-static boolean doScan = false;
+static boolean isScanning = false;
 static BLERemoteCharacteristic* pRemoteCharacteristic;
 static BLEAdvertisedDevice* myDevice;
 static BLEAdvertisedDevice* connectedDevice[nTags];
@@ -48,22 +49,36 @@ static void notifyCallback(
 
 }
 
+void startScan(){
+  if(isScanning==false) { 
+  BLEDevice::getScan()->start(0);
+  isScanning=true;
+  }
+}
+void stopScan(){
+  if(isScanning==true) { 
+      BLEDevice::getScan()->stop();
+      isScanning=false; }
+}
     //keeptrack of how many tags are connected
 class MyClientCallback : public BLEClientCallbacks {
 
   void onConnect(BLEClient* pclient) {
     nConnectedTags +=1;
-    Serial.println("onConnect");
+    Serial.println(nConnectedTags);
   }
 
   void onDisconnect(BLEClient* pclient) {
     nConnectedTags +=-1;
     Serial.println("onDisconnect");
     allConnected = false;
+    startScan();
+
   }
 };
 
 // server = TAG
+
 
 bool connectToServer() {
 
@@ -116,27 +131,21 @@ bool connectToServer() {
     if(pRemoteCharacteristic->canNotify())
       pRemoteCharacteristic->registerForNotify(notifyCallback);
     //Once here assumption is connection is formed
+    pRemoteTagdoAdvCharacteristic->writeValue("0");
     connectedDevice[counter] = myDevice;
-    counter += 1;
+    M5.Lcd.println(counter);
     return true;
+    
 
 }
 
-bool isAllConnected() {
-  if (connectToServer()) {
-    //would this work if instead nConnectedTags we write counter == nTags
-    if (nConnectedTags == nTags) {
-      doConnect = false;
-      M5.Lcd.println("All connected");
-      return true;
-    }
+void startScanRoutine() {
+  isRoutineRunning =true;
+  if(connectToServer()){
+    counter += 1;
   }
-  doConnect = true;
-  delay(200);
-  return isAllConnected();
 
 }
-
 /**
  * Scan for BLE servers and find the first one that advertises the service we are looking for.
  */
@@ -146,13 +155,13 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
    */
 
   void onResult(BLEAdvertisedDevice advertisingDevice) {
-    Serial.println("BLE Advertising Device found: ");
+    Serial.println("Scanned BLE Device: ");
     Serial.println(advertisingDevice.toString().c_str());
     // We have found a device, let us now see if it contains the service we are looking for.
     if (advertisingDevice.haveServiceUUID() && advertisingDevice.isAdvertisingService(serviceUUID) && nConnectedTags < nTags) {
-      BLEDevice::getScan()->stop();
       //TODO:Tell the tag to stop advertising
       myDevice = new BLEAdvertisedDevice(advertisingDevice);
+      
     } // Found our server
   } // onResult
 }; // MyAdvertisedDeviceCallbacks
@@ -162,14 +171,13 @@ void setup() {
   M5.begin();
   Serial.begin(9600);
   Serial.println("Initializing...");
+  isScanning=true;
   BLEDevice::init("ANCHOR");
-
+  BLEScan* pBLEScan = BLEDevice::getScan();
   // Retrieve a Scanner and set the callback we want to use to be informed when we
   // have detected a new device.  Specify that we want active scanning and start the
   // scan to run for SCAN_TIME seconds (defined above)
 
-  doConnect = true;
-  BLEScan* pBLEScan = BLEDevice::getScan();
   pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
 
   //callback for advertising devices around.
@@ -178,6 +186,7 @@ void setup() {
   pBLEScan->setWindow(449);
   pBLEScan->setActiveScan(true);
   pBLEScan->start(SCAN_TIME, false);
+  
 
 } // End of setup.
 // This is the Arduino main loop function.
@@ -196,7 +205,7 @@ void loop() {
   // connected we set the connected flag to be true.
 
   M5.update();
-
+  Serial.println(nConnectedTags);
   // Whenever the button is pressed a value of "1" is written to the characteristic to be read by the server to blink.
 
   if (M5.BtnA.isPressed()) {
@@ -204,27 +213,29 @@ void loop() {
     M5.Lcd.println("Button is pressed");
   } 
 
-  if (doConnect == true) {
-    //calls and waits until true
-      Serial.println("Connecting to tags..");
-    if (isAllConnected()) {
-      Serial.println("We are now connected to all BLE Tags");
-    } 
-  }
 
   // If we are connected to a peer BLE Server, update the characteristic each time we are reached
   // with the current time since boot.
 
   if (allConnected) {
-    String newValue = "Time since boot: " + String(millis()/1000);
-    Serial.println("Setting new characteristic value to \"" + newValue + "\"");
-    // Set the characteristic's value to be the array of bytes that is actually a string.
-    pRemoteCharacteristic->writeValue(newValue.c_str(), newValue.length());
-  }else if(doScan){
-    Serial.println("Starting scan \"");
-    BLEDevice::getScan()->start(0);  // this is just eample to start scan after disconnect, most likely there is better way to do it in arduino
-  }
 
-  delay(100); // Delay a second between loops.
+    String newValue = "Time since boot: " + String(millis()/1000);
+    // Set the characteristic's value to be the array of bytes that is actually a string.  
+  } else {
+        if (nConnectedTags == nTags) {
+          allConnected=true;
+          M5.Lcd.println("All connected");
+          Serial.println("All connected");
+          stopScan();
+       } else {
+          
+          if(isRoutineRunning==false){
+            M5.Lcd.println("Routine starting..");
+            startScanRoutine();       
+            }
+       }
+    }
+
+  delay(200); // Delay a 100ms between loops.
 
 } // End of loop
