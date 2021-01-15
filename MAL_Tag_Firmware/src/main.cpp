@@ -11,8 +11,8 @@
 #define dacPin1 25
 //Variable init
 bool deviceConnected = false;
-uint8_t anchorPing = 0;
-
+uint8_t doAdvertise = 0;
+bool isAdvertising = false;
 BLEServer *holdServer;
 
 /**
@@ -50,6 +50,7 @@ class ServerCallbacks: public BLEServerCallbacks {
 
     void onDisconnect(BLEServer* pServer) {
       deviceConnected = false;
+      holdServer->getAdvertising()->start();
       doAdvCharacteristic.setValue("1");
 
     }
@@ -133,6 +134,7 @@ void setup() {
   pService->addCharacteristic(&doAdvCharacteristic);
   pService->addCharacteristic(&IDCharacteristic);
 
+  isAdvertising=true;
   pServer->getAdvertising()->addServiceUUID(SERVICE_UUID);
   pService->start();
   pServer->getAdvertising()->start();
@@ -141,8 +143,18 @@ void setup() {
 
 void loop() {
 
-  if(doAdvCharacteristic.getValue())
-
+  
+  doAdvertise = *(doAdvCharacteristic.getData());
+  Serial.println(doAdvertise);
+  if(doAdvertise == 49 ){
+    isAdvertising = true;
+    holdServer->getAdvertising()->start();
+    Serial.println("isAdvertise true");
+  }
+  if(doAdvertise == 48 ){
+    holdServer->getAdvertising()->stop();
+    Serial.println("isAdvertise false");
+  }
 
  delay(1000);
 
