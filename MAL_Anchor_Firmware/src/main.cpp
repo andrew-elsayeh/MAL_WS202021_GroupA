@@ -22,14 +22,14 @@ static BLEUUID charIDUUID("722163a8-8aa7-4d93-b502-100777de4619");
 static BLEUUID doAdvUUID("87e692ad-d2eb-4ef2-972d-f624f0ab7847");
 
 #define nTags 1
-#define SCAN_TIME 10
+#define SCAN_TIME 0
 
 int nConnectedTags = 0;
 int counter=0;
 
 static boolean doConnect = false;
 static boolean allConnected = false;
-static boolean doScan = false;
+static boolean doScan = true;
 static BLERemoteCharacteristic* pRemoteCharacteristic;
 static BLEAdvertisedDevice* myDevice;
 static BLEAdvertisedDevice* connectedDevice[nTags];
@@ -225,7 +225,8 @@ void loop() {
     M5.Lcd.println("Setting new characteristic value to \"" + newValue + "\"");
     // Set the characteristic's value to be the array of bytes that is actually a string.
     pRemoteCharacteristic->writeValue(newValue.c_str(), newValue.length());
-  }else if(doScan){
+    BLEDevice::getScan()->stop();
+  } else if (doScan){
     Serial.println("Starting scan \"");
     BLEDevice::getScan()->start(0);  // this is just eample to start scan after disconnect, most likely there is better way to do it in arduino
   }
