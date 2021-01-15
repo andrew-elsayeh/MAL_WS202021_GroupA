@@ -8,7 +8,7 @@
  * 
  */
 
-#include "BLEDevice.h"
+#include <BLEDevice.h>
 #include "BLEScan.h"
 #include <Arduino.h>
 #include <M5StickC.h>
@@ -120,6 +120,7 @@ bool connectToServer() {
     if(pRemoteCharacteristic->canNotify())
       pRemoteCharacteristic->registerForNotify(notifyCallback);
     //Once here assumption is connection is formed
+    pRemoteTagdoAdvCharacteristic->writeValue("0");
     connectedDevice[counter] = myDevice;
     counter += 1;
     return true;
@@ -136,6 +137,7 @@ bool isAllConnected() {
     }
   }
   doConnect = true;
+  delay(100);
   return isAllConnected();
 }
 
@@ -220,7 +222,7 @@ void loop() {
 
   if (allConnected) {
     String newValue = "Time since boot: " + String(millis()/1000);
-    Serial.println("Setting new characteristic value to \"" + newValue + "\"");
+    M5.Lcd.println("Setting new characteristic value to \"" + newValue + "\"");
     // Set the characteristic's value to be the array of bytes that is actually a string.
     pRemoteCharacteristic->writeValue(newValue.c_str(), newValue.length());
   }else if(doScan){
