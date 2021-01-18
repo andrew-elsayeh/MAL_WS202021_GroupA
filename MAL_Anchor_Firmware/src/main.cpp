@@ -18,12 +18,13 @@ static BLEUUID charIDUUID("722163a8-8aa7-4d93-b502-100777de4619");
 static BLEUUID doAdvUUID("87e692ad-d2eb-4ef2-972d-f624f0ab7847");
 
 #define nTags 1
-#define SCAN_TIME 10
+
+#define SCAN_TIME 10 // ??
 
 bool isRoutineRunning=false;
 int nConnectedTags = 0;
 int counter=0;
-int connCounter=0;
+int whichTagPing=0;
 
 static boolean allConnected = false;
 static boolean isScanning = false;
@@ -32,6 +33,8 @@ static BLEAdvertisedDevice* myDevice;
 static BLEAdvertisedDevice* connectedDevice[nTags];
 static BLERemoteCharacteristic* pRemoteTagIDCharacteristic;
 static BLERemoteCharacteristic* pRemoteTagdoAdvCharacteristic;
+
+BLEClient* pClientTracker[nTags];
 
 static void notifyCallback(
 
@@ -70,6 +73,7 @@ class MyClientCallback : public BLEClientCallbacks {
 
   void onDisconnect(BLEClient* pclient) {
     nConnectedTags +=-1;
+    counter += -1;
     Serial.println("onDisconnect");
     allConnected = false;
     startScan();
@@ -94,7 +98,6 @@ bool connectToServer() {
 
     // Obtain a reference to the service we are after in the remote BLE server.
     BLERemoteService* pRemoteService = pClient->getService(serviceUUID);
-
     if (pRemoteService == nullptr) {
       M5.Lcd.println("Failed to find our service UUID on device: ");
       Serial.println(serviceUUID.toString().c_str());
@@ -133,6 +136,7 @@ bool connectToServer() {
     //Once here assumption is connection is formed
     pRemoteTagdoAdvCharacteristic->writeValue("0");
     connectedDevice[counter] = myDevice;
+    pClientTracker[counter] = pClient;
     M5.Lcd.println(counter);
     return true;
     
@@ -209,7 +213,12 @@ void loop() {
   // Whenever the button is pressed a value of "1" is written to the characteristic to be read by the server to blink.
 
   if (M5.BtnA.isPressed()) {
-    pRemoteCharacteristic->writeValue("1");
+    //checks the tag's ID characteristic value (either preprogrmamed 0 1 2), if match then write 1 to char UUID (blink)
+    for (int i = 0; i < nTags; i++) {
+      if(i==pClientTracker[whichTagPing]->getService(serviceUUID)->getCharacteristic(charIDUUID)->readValue()){
+        pClientTracker[whichTagPing]->getService(serviceUUID)->getCharacteristic(charUUID)->writeValue("1");
+      }     
+    }   
     M5.Lcd.println("Button is pressed");
   } 
 
