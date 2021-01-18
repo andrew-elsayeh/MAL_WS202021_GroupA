@@ -18,20 +18,19 @@ static BLEUUID charIDUUID("722163a8-8aa7-4d93-b502-100777de4619");
 static BLEUUID doAdvUUID("87e692ad-d2eb-4ef2-972d-f624f0ab7847");
 
 #define nTags 1
-#define SCAN_TIME 10
+#define SCAN_TIME 0
 
 bool isRoutineRunning=false;
 int nConnectedTags = 0;
 int counter=0;
-int connCounter=0;
 
 static boolean allConnected = false;
 static boolean isScanning = false;
-static BLERemoteCharacteristic* pRemoteCharacteristic;
+static BLERemoteCharacteristic* pRemoteCharacteristic[nTags];
 static BLEAdvertisedDevice* myDevice;
-static BLEAdvertisedDevice* connectedDevice[nTags];
-static BLERemoteCharacteristic* pRemoteTagIDCharacteristic;
-static BLERemoteCharacteristic* pRemoteTagdoAdvCharacteristic;
+static BLEAdvertisedDevice* connectedDevice[nTags]; // do we even need this
+static BLERemoteCharacteristic* pRemoteTagIDCharacteristic[nTags];
+static BLERemoteCharacteristic* pRemoteTagdoAdvCharacteristic[nTags];
 
 static void notifyCallback(
 
@@ -49,30 +48,21 @@ static void notifyCallback(
 
 }
 
-void startScan(){
-  if(isScanning==false) { 
-  BLEDevice::getScan()->start(0);
-  isScanning=true;
-  }
-}
-void stopScan(){
-  if(isScanning==true) { 
-      BLEDevice::getScan()->stop();
-      isScanning=false; }
-}
     //keeptrack of how many tags are connected
 class MyClientCallback : public BLEClientCallbacks {
 
   void onConnect(BLEClient* pclient) {
     nConnectedTags +=1;
-    Serial.println(nConnectedTags);
+    Serial.println("PING");
   }
 
   void onDisconnect(BLEClient* pclient) {
     nConnectedTags +=-1;
-    Serial.println("onDisconnect");
+    counter += -1; 
+    Serial.println("onDisconnect, counter is now : ");
+    Serial.println(counter);
     allConnected = false;
-    startScan();
+
 
   }
 };
@@ -104,13 +94,13 @@ bool connectToServer() {
 
     Serial.println(" - Found our service");
     // Obtain a reference to the characteristic in the service of the remote BLE server.
-
-    pRemoteCharacteristic = pRemoteService->getCharacteristic(charUUID);
-    pRemoteTagIDCharacteristic = pRemoteService->getCharacteristic(charIDUUID);
-    pRemoteTagdoAdvCharacteristic = pRemoteService->getCharacteristic(doAdvUUID);
+    Serial.println(counter);
+    pRemoteCharacteristic[counter] = pRemoteService->getCharacteristic(charUUID);
+    pRemoteTagIDCharacteristic[counter] = pRemoteService->getCharacteristic(charIDUUID);
+    pRemoteTagdoAdvCharacteristic[counter] = pRemoteService->getCharacteristic(doAdvUUID);
     connectedDevice[nConnectedTags] = myDevice;
 
-    if (pRemoteCharacteristic == nullptr) {
+    if (pRemoteCharacteristic[counter] == nullptr) {
       M5.Lcd.println("Failed to find our characteristic UUID: ");
       Serial.println(charUUID.toString().c_str());
       pClient->disconnect();
@@ -120,18 +110,18 @@ bool connectToServer() {
     M5.Lcd.println(" - Found our characteristic");
 
     // Read the value of the characteristic.
-    if(pRemoteCharacteristic->canRead()) {
-      std::string value = pRemoteCharacteristic->readValue();
+    if(pRemoteCharacteristic[counter]->canRead()) {
+      std::string value = pRemoteCharacteristic[counter]->readValue();
       Serial.println("The characteristic value was: ");
       Serial.println(value.c_str());
     }
 
     // ???
 
-    if(pRemoteCharacteristic->canNotify())
-      pRemoteCharacteristic->registerForNotify(notifyCallback);
+    if(pRemoteCharacteristic[counter]->canNotify())
+      pRemoteCharacteristic[counter]->registerForNotify(notifyCallback);
     //Once here assumption is connection is formed
-    pRemoteTagdoAdvCharacteristic->writeValue("0");
+    pRemoteTagdoAdvCharacteristic[counter]->writeValue("0");
     connectedDevice[counter] = myDevice;
     M5.Lcd.println(counter);
     return true;
@@ -139,13 +129,20 @@ bool connectToServer() {
 
 }
 
-void startScanRoutine() {
-  isRoutineRunning =true;
-  if(connectToServer()){
-    counter += 1;
+void startConnectRoutine(){
+    if(isRoutineRunning == false){
+        isRoutineRunning = true; 
+        if(connectToServer()){
+          //returns a true upon an established connection
+          counter += 1;
+          if(nConnectedTags==nTags){
+            isRoutineRunning=false;
+            return;
+          }
+        }
+    }
   }
 
-}
 /**
  * Scan for BLE servers and find the first one that advertises the service we are looking for.
  */
@@ -161,10 +158,29 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     if (advertisingDevice.haveServiceUUID() && advertisingDevice.isAdvertisingService(serviceUUID) && nConnectedTags < nTags) {
       //TODO:Tell the tag to stop advertising
       myDevice = new BLEAdvertisedDevice(advertisingDevice);
+
+
       
     } // Found our server
   } // onResult
 }; // MyAdvertisedDeviceCallbacks
+
+void startScan(){
+  if(isScanning==false) { 
+  BLEScan* pBLEScan = BLEDevice::getScan();
+  pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
+  pBLEScan->setInterval(1349);
+  pBLEScan->setWindow(449);
+  pBLEScan->setActiveScan(true);
+  pBLEScan->start(SCAN_TIME, false);
+  isScanning=true;
+  }
+}
+void stopScan(){
+  if(isScanning==true) { 
+      BLEDevice::getScan()->stop();
+      isScanning=false; }
+}
 
 void setup() {
 
@@ -209,7 +225,7 @@ void loop() {
   // Whenever the button is pressed a value of "1" is written to the characteristic to be read by the server to blink.
 
   if (M5.BtnA.isPressed()) {
-    pRemoteCharacteristic->writeValue("1");
+    pRemoteCharacteristic[0]->writeValue("1");
     M5.Lcd.println("Button is pressed");
   } 
 
@@ -224,15 +240,17 @@ void loop() {
   } else {
         if (nConnectedTags == nTags) {
           allConnected=true;
+          isRoutineRunning=false;
           M5.Lcd.println("All connected");
           Serial.println("All connected");
           stopScan();
        } else {
           
           if(isRoutineRunning==false){
-            M5.Lcd.println("Routine starting..");
-            startScanRoutine();       
-            }
+            startScan();
+            startConnectRoutine();
+      
+          }
        }
     }
 
