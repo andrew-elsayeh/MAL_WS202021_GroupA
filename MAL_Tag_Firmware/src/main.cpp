@@ -3,17 +3,26 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 #include <Arduino.h>
+#include <M5StickC.h>
+
 // define client-server UUIDs
 #define SERVICE_UUID        "b09dc577-bc1b-4d86-963b-e6d6b9fdacdb"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 #define ADVERTISE_UUID      "87e692ad-d2eb-4ef2-972d-f624f0ab7847"
 #define ID_UUID             "c94b85d1-bff6-4faa-88f2-4647326b576e"
 #define dacPin1 25
+
 //Variable init
 bool deviceConnected = false;
 uint8_t doAdvertise = 0;
 bool isAdvertising = false;
 BLEServer *holdServer;
+
+// Speaker Set-up
+const int servo_pin = 26;
+int freq = 50;
+int ledChannel = 0;
+int resolution = 10;
 
 /**
  * doAdvCharacteristic is Anchor (BLEClient) side controlled
@@ -59,21 +68,20 @@ class ServerCallbacks: public BLEServerCallbacks {
 class charCallbacks: 
   public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic *pCharacteristic) {
+      M5.update();
       std::string value = pCharacteristic->getValue();
       uint8_t dumnum;
       dumnum = *(dacCharacteristic.getData());
       if(deviceConnected == true) {
     // BLECharacteristics setValue() i haven't figured it out how to set to 0, but setting value to "0" gives me the value 48 (it's ascii) (init at line 60)
         if(dumnum == 49 ){
-          dacWrite(dacPin1, 255);
+          ledcWriteTone(ledChannel, 1250);
           delay(3000);
-          dacWrite(dacPin1, 0);
+          ledcWrite(ledChannel, 0);
           pCharacteristic->setValue("0");
-
           }
       }
 
-      
       if (value.length() > 0) {
         Serial.println("\r\nChar value: ");
         for (int i = 0; i < value.length(); i++)
@@ -112,7 +120,11 @@ class IDCallbacks:
 
 void setup() {
   Serial.begin(9600);
-  pinMode(dacPin1, OUTPUT);
+  M5.begin();
+
+  ledcSetup(ledChannel, freq, resolution);
+  ledcAttachPin(servo_pin, ledChannel);
+  ledcWrite(ledChannel, 0);
 
   BLEDevice::init("Tag_ESP32");
   BLEServer *pServer = BLEDevice::createServer();
@@ -142,7 +154,7 @@ void setup() {
 }
 
 void loop() {
-
+  M5.update();
   
   doAdvertise = *(doAdvCharacteristic.getData());
   Serial.println(doAdvertise);
