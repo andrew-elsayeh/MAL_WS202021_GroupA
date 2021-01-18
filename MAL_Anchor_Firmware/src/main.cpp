@@ -8,17 +8,18 @@
 #include "BLEScan.h"
 #include <Arduino.h>
 #include <M5StickC.h>
+#include <stdlib.h>
 
 // The remote service we wish to connect to. THE TAGS HAVE TO HAVE THIS ID
 static BLEUUID serviceUUID("b09dc577-bc1b-4d86-963b-e6d6b9fdacdb");
 
 // The characteristic of the remote service we are interested in.
 static BLEUUID charUUID("beb5483e-36e1-4688-b7f5-ea07361b26a8");
-static BLEUUID charIDUUID("722163a8-8aa7-4d93-b502-100777de4619");
+static BLEUUID TagIDUUID("722163a8-8aa7-4d93-b502-100777de4619");
 static BLEUUID doAdvUUID("87e692ad-d2eb-4ef2-972d-f624f0ab7847");
 
-#define nTags 1
-#define SCAN_TIME 0
+#define nTags 3
+#define SCAN_TIME 10
 
 bool isRoutineRunning=false;
 int nConnectedTags = 0;
@@ -94,9 +95,10 @@ bool connectToServer() {
 
     Serial.println(" - Found our service");
     // Obtain a reference to the characteristic in the service of the remote BLE server.
+    Serial.println("\n Counter is : ");
     Serial.println(counter);
     pRemoteCharacteristic[counter] = pRemoteService->getCharacteristic(charUUID);
-    pRemoteTagIDCharacteristic[counter] = pRemoteService->getCharacteristic(charIDUUID);
+    pRemoteTagIDCharacteristic[counter] = pRemoteService->getCharacteristic(TagIDUUID);
     pRemoteTagdoAdvCharacteristic[counter] = pRemoteService->getCharacteristic(doAdvUUID);
     connectedDevice[nConnectedTags] = myDevice;
 
@@ -135,8 +137,11 @@ void startConnectRoutine(){
         if(connectToServer()){
           //returns a true upon an established connection
           counter += 1;
+          Serial.println(nConnectedTags);
+          Serial.println(" are connected\n");
           if(nConnectedTags==nTags){
             isRoutineRunning=false;
+            Serial.println("Connection to all devices established");
             return;
           }
         }
@@ -221,13 +226,24 @@ void loop() {
   // connected we set the connected flag to be true.
 
   M5.update();
-  Serial.println(nConnectedTags);
   // Whenever the button is pressed a value of "1" is written to the characteristic to be read by the server to blink.
 
   if (M5.BtnA.isPressed()) {
-    pRemoteCharacteristic[0]->writeValue("1");
+    for (int i=0; i<nTags ;i++){
+      if(pRemoteTagIDCharacteristic[i] != nullptr){
+        //x is assigned by changing the ID value on the tag
+        int x = atoi(pRemoteTagIDCharacteristic[i]->readValue().c_str());
+        Serial.println(x);
+        if(x == i ){
+          pRemoteCharacteristic[i]->writeValue("1");
+        }        
+      }    
+    }
     M5.Lcd.println("Button is pressed");
-  } 
+  }
+    
+  
+
 
 
   // If we are connected to a peer BLE Server, update the characteristic each time we are reached

@@ -4,17 +4,18 @@
 #include <BLE2902.h>
 #include <Arduino.h>
 // define client-server UUIDs
+
 #define SERVICE_UUID        "b09dc577-bc1b-4d86-963b-e6d6b9fdacdb"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 #define ADVERTISE_UUID      "87e692ad-d2eb-4ef2-972d-f624f0ab7847"
-#define ID_UUID             "c94b85d1-bff6-4faa-88f2-4647326b576e"
+#define ID_UUID             "722163a8-8aa7-4d93-b502-100777de4619"
 #define dacPin1 25
 //Variable init
 bool deviceConnected = false;
 uint8_t doAdvertise = 0;
 bool isAdvertising = false;
 BLEServer *holdServer;
-
+std::string flashID= "0";
 /**
  * doAdvCharacteristic is Anchor (BLEClient) side controlled
  * Only the anchor should be able to tell the device to stop advertising incase device loses connection
@@ -59,7 +60,14 @@ class ServerCallbacks: public BLEServerCallbacks {
 class charCallbacks: 
   public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic *pCharacteristic) {
+      
       std::string value = pCharacteristic->getValue();
+      if (value.length() > 0) {
+        Serial.println("\r\nChar value: ");
+        for (int i = 0; i < value.length(); i++)
+          Serial.print(value[i]);
+        Serial.println("\n");
+      }
       uint8_t dumnum;
       dumnum = *(dacCharacteristic.getData());
       if(deviceConnected == true) {
@@ -74,12 +82,7 @@ class charCallbacks:
       }
 
       
-      if (value.length() > 0) {
-        Serial.println("\r\nChar value: ");
-        for (int i = 0; i < value.length(); i++)
-          Serial.print(value[i]);
-        Serial.println("\n");
-      }
+      
     }
 };
 
@@ -128,7 +131,8 @@ void setup() {
 
   dacCharacteristic.setValue("0");
   doAdvCharacteristic.setValue("1");
-  IDCharacteristic.setValue("1");
+  
+  IDCharacteristic.setValue(flashID);
 
   pService->addCharacteristic(&dacCharacteristic);
   pService->addCharacteristic(&doAdvCharacteristic);
