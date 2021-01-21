@@ -5,7 +5,15 @@
 #include <Arduino.h>
 // define client-server UUIDs
 
-#define SERVICE_UUID        "b09dc577-bc1b-4d86-963b-e6d6b9fdacdb"
+static BLEUUID serviceUUID[3] = {
+
+  BLEUUID("51a6e40a-88df-444b-ad03-3fc40a0e035b"),
+  BLEUUID("073623b4-ad83-4e72-a699-8be79fe42612"),
+  BLEUUID("2eeebadf-8c43-4c2e-9246-1b9a45222401")
+
+};
+
+BLEUUID SERVICE_UUID = serviceUUID[0];
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 #define ADVERTISE_UUID      "87e692ad-d2eb-4ef2-972d-f624f0ab7847"
 #define ID_UUID             "722163a8-8aa7-4d93-b502-100777de4619"
@@ -16,6 +24,7 @@ uint8_t doAdvertise = 0;
 bool isAdvertising = false;
 BLEServer *holdServer;
 std::string flashID= "0";
+
 /**
  * doAdvCharacteristic is Anchor (BLEClient) side controlled
  * Only the anchor should be able to tell the device to stop advertising incase device loses connection
@@ -42,16 +51,28 @@ BLECharacteristic doAdvCharacteristic(
 );
 
 //Server Callbacks handling
-
+void AdvertiseRoutine(){
+    doAdvertise = *(doAdvCharacteristic.getData());
+  if(doAdvertise == 49 && isAdvertising == false){
+    isAdvertising = true;
+    holdServer->getAdvertising()->start(); 
+  }
+  if(doAdvertise == 48 ){
+    holdServer->getAdvertising()->stop();
+  }
+}
 class ServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
       deviceConnected = true;
       Serial.println("Connected");
+      AdvertiseRoutine();
     };
 
     void onDisconnect(BLEServer* pServer) {
       deviceConnected = false;
       holdServer->getAdvertising()->start();
+      isAdvertising = true;
+      Serial.println("Advertising..");
       doAdvCharacteristic.setValue("1");
 
     }
@@ -148,17 +169,7 @@ void setup() {
 void loop() {
 
   
-  doAdvertise = *(doAdvCharacteristic.getData());
-  Serial.println(doAdvertise);
-  if(doAdvertise == 49 ){
-    isAdvertising = true;
-    holdServer->getAdvertising()->start();
-    Serial.println("isAdvertise true");
-  }
-  if(doAdvertise == 48 ){
-    holdServer->getAdvertising()->stop();
-    Serial.println("isAdvertise false");
-  }
+
 
  delay(1000);
 

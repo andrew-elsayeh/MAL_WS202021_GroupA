@@ -9,42 +9,31 @@
 #include <Arduino.h>
 #include <M5StickC.h>
 #include <stdlib.h>
+int k =0;
+// The remote service we wish to connect to. THE TAGS HAVE TO HAVE THIS ID
+static BLEUUID serviceUUID1 0x181A
+static BLEUUID serviceUUID2 0x181B
+static BLEUUID serviceUUID3 0x181C
+int nTick=0;
+// The characteristic of the remote service we are interested in.
+static BLEUUID charUUID("beb5483e-36e1-4688-b7f5-ea07361b26a8");
+static BLEUUID TagIDUUID("722163a8-8aa7-4d93-b502-100777de4619");
+static BLEUUID doAdvUUID("87e692ad-d2eb-4ef2-972d-f624f0ab7847");
 
 #define LOOP_INTERVAL 200
 #define nTags 3
 #define SCAN_TIME 7
-
-// The remote service we wish to connect to. THE TAGS HAVE TO HAVE THIS ID
-static BLEUUID serviceUUID[nTags] = {
-
-  BLEUUID("51a6e40a-88df-444b-ad03-3fc40a0e035b"),
-  BLEUUID("073623b4-ad83-4e72-a699-8be79fe42612"),
-  BLEUUID("2eeebadf-8c43-4c2e-9246-1b9a45222401")
-
-};
-
-int nTick=0;
-// The characteristic of the remote service we are interested in.
-static BLEUUID charUUID("beb5483e-36e1-4688-b7f5-ea07361b26a8");
-static BLEUUID TagIDUUID("722163a8-8aa7-4d93-b502-100777de4619"); //obsolete in this ver
-static BLEUUID doAdvUUID("87e692ad-d2eb-4ef2-972d-f624f0ab7847");
-std::string stringAddress = "000000";
-BLEAddress asd(stringAddress);
-
-BLEAddress storedAddress[nTags] ={asd,asd,asd};
-
 int nValidDevices=0;
 bool isRoutineRunning=false;
 int nConnectedTags = 0;
 int counter=0;
-int storedID[nTags];
 bool isThisTagConnected[nTags];
 bool isThisTagFound[nTags];
-
+BLEAddress storedAddress[nTags];
 static boolean allConnected = false;
 static boolean isScanning = false;
 static BLERemoteCharacteristic* pRemoteCharacteristic[nTags];
-BLEAdvertisedDevice* foundDevices[nTags];
+BLEAdvertisedDevice* myDevice;
 BLEClient* pClientHandler[nTags];
 BLEAdvertisedDevice* connectedDevice[nTags]; // do we even need this
 static BLERemoteCharacteristic* pRemoteTagIDCharacteristic[nTags];
@@ -52,12 +41,11 @@ static BLERemoteCharacteristic* pRemoteTagdoAdvCharacteristic[nTags];
 int WhichToPing=0;
 
 int AddressToID(BLEAddress address){
-  for(int i=0;i<nTags;i++){
+  for(i++;i<nTags;i++){
     if(address.equals(storedAddress[i])){
       return i;
     }
   }
-  return -1;
 }
 
 
@@ -88,10 +76,11 @@ class CounterCallback : public BLEClientCallbacks {
   void onDisconnect(BLEClient* pclient) {
     nConnectedTags +=-1;
     counter += -1;
-    isThisTagFound[AddressToID(pclient->getPeerAddress] = false;
+    pclient->getService(serviceUUID)->getCharacteristic(TagIDUUID);
     Serial.println("onDisconnect, counter is now : ");
     Serial.println(counter);
     allConnected = false;
+    pclient->getPeerAddress();
 
   }
 };
@@ -110,62 +99,73 @@ class dummyCallback : public BLEClientCallbacks {
 // server = TAG
 
 
-bool connectToServer(BLEAdvertisedDevice* myDevice,BLEClient* pClient, int internal) {
-    
-    Serial.printf("Forming a connection to %d ",internal);
-    Serial.println(myDevice->getAddress().toString().c_str());
+bool connectToServer() {
+
+    M5.Lcd.println("Forming a connection to ");
+    M5.Lcd.println(myDevice->getAddress().toString().c_str());
         
-    Serial.println(serviceUUID[internal].toString().c_str());
+    BLEClient*  pClient  = BLEDevice::createClient();
+    Serial.println(" - Created client");
+    pClient->setClientCallbacks(new CounterCallback());
+
+
 
     // Connect to the remote BLE Server.
     pClient->connect(myDevice);  // if you pass BLEAdvertisedDevice instead of address, it will be recognized type of peer device address (public or private)
     M5.Lcd.println(" - Connected to server");
-    BLERemoteService* pRemoteService = pClient->getService(serviceUUID[internal]);
-    
+    int IDTagNumber = atoi(pClient->getService(serviceUUID)->getCharacteristic(TagIDUUID)->readValue().c_str());
+    if(isThisTagConnected[IDTagNumber]==true){
+      pClient->disconnect();
+      isRoutineRunning = false;
+      return false;
+    }
+    storedAddress[IDTagNumber] = myDevice->getAddress();
+    isThisTagConnected[IDTagNumber] = true;
+    // Obtain a reference to the service we are after in the remote BLE server.
+    BLERemoteService* pRemoteService = pClient->getService(serviceUUID);
 
     if (pRemoteService == nullptr) {
       M5.Lcd.println("Failed to find our service UUID on device: ");
-      Serial.println(serviceUUID[internal].toString().c_str());
+      Serial.println(serviceUUID.toString().c_str());
       pClient->disconnect();
       return false;
     }
 
-    if(isThisTagConnected[internal]==true){
-      return false;
-    }
-    storedAddress[internal] = (myDevice->getAddress());
-    int TagID = atoi(pRemoteService->getCharacteristic(TagIDUUID)->readValue().c_str());
-    storedID[internal] = TagID;
-
-    isThisTagConnected[internal] = true;
-    // Obtain a reference to the service we are after in the remote BLE server.
-   
-
-    
+    Serial.println(" - Found our service");
     // Obtain a reference to the characteristic in the service of the remote BLE server.
-    Serial.printf("\n Found Tag was number : %d\n",TagID);
-
+    Serial.println("\n Found Tag was number : ");
+    Serial.println(IDTagNumber);
     //store the variables
-    pRemoteCharacteristic[internal] = pRemoteService->getCharacteristic(charUUID);
-    pRemoteTagIDCharacteristic[internal] = pRemoteService->getCharacteristic(TagIDUUID);
-    pRemoteTagdoAdvCharacteristic[internal] = pRemoteService->getCharacteristic(doAdvUUID);
-    connectedDevice[internal] = myDevice;
+    pRemoteCharacteristic[IDTagNumber] = pRemoteService->getCharacteristic(charUUID);
+    pRemoteTagIDCharacteristic[IDTagNumber] = pRemoteService->getCharacteristic(TagIDUUID);
+    pRemoteTagdoAdvCharacteristic[IDTagNumber] = pRemoteService->getCharacteristic(doAdvUUID);
+    connectedDevice[IDTagNumber] = myDevice;
 
-    if (pRemoteCharacteristic[internal] == nullptr) {
+    if (pRemoteCharacteristic[IDTagNumber] == nullptr) {
       M5.Lcd.println("Failed to find our characteristic UUID: ");
       Serial.println(charUUID.toString().c_str());
       pClient->disconnect();
       return false;
     }
 
-    M5.Lcd.println(" - Found our characteristics");
-    if(pRemoteCharacteristic[internal]->canNotify()) {
-      pRemoteCharacteristic[internal]->registerForNotify(notifyCallback);
+    M5.Lcd.println(" - Found our characteristic");
+
+    // Read the value of the characteristic.
+    if(pRemoteCharacteristic[IDTagNumber]->canRead()) {
+      std::string value = pRemoteCharacteristic[IDTagNumber]->readValue();
+      Serial.println("The characteristic value was: ");
+      Serial.println(value.c_str());
     }
 
-    pRemoteTagdoAdvCharacteristic[internal]->writeValue("0");
-    isThisTagConnected[internal] = true;
-    pClientHandler[internal] = pClient;
+    // ???
+
+    if(pRemoteCharacteristic[IDTagNumber]->canNotify()) {
+      pRemoteCharacteristic[IDTagNumber]->registerForNotify(notifyCallback);
+    }
+    //Once here assumption is connection is formed
+    pRemoteTagdoAdvCharacteristic[IDTagNumber]->writeValue("0");
+    counter += 1;
+    isRoutineRunning=false;
     return true;
     
 
@@ -173,30 +173,20 @@ bool connectToServer(BLEAdvertisedDevice* myDevice,BLEClient* pClient, int inter
 
 void startConnectRoutine(){
     if(isRoutineRunning == false){
-
         isRoutineRunning = true; 
-
-        if(counter>=nTags){
-          isRoutineRunning = false;
-          Serial.println("Connection to all devices established");
-          allConnected=true;
-          return;
-          } else {
-            for(int i=0;i<nTags;i++){
-              if(isThisTagFound[i]==true && isThisTagConnected[i] ==false){
-                if(connectToServer(foundDevices[i],pClientHandler[i],i)) {
-                  Serial.printf("Number ID %d established",storedID[i]);
-                  counter++;
-                }
-
-              }
-            }
-            isRoutineRunning=false;
+        if(connectToServer()){
+          //returns a true upon an established connection
+          
+          Serial.println(nConnectedTags);
+          Serial.println(" are connected\n");
+          if(nConnectedTags==nTags){
+            
+            Serial.println("Connection to all devices established");
+            
           }
-
+        }
+    }
   }
-}
-
 
 /**
  * Scan for BLE servers and find the first one that advertises the service we are looking for.
@@ -210,16 +200,28 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     Serial.println("Scanned BLE Device: ");
     Serial.println(advertisingDevice.toString().c_str());
     // We have found a device, let us now see if it contains the service we are looking for.
-    for(int i=0;i<nTags;i++){
-      if (advertisingDevice.haveServiceUUID() && advertisingDevice.isAdvertisingService(serviceUUID[i]) ) {
-        Serial.printf("Found our service : ");
-        Serial.printf(serviceUUID[i].toString().c_str());
-        foundDevices[i] = new BLEAdvertisedDevice(advertisingDevice);
-        isThisTagFound[i] = true;
-      }  
-    }
-  }
-   // Found our server
+    if (advertisingDevice.haveServiceUUID() && advertisingDevice.isAdvertisingService(serviceUUID) && nConnectedTags < nTags) {
+      
+      if(nValidDevices == 0){
+      validDevices[nValidDevices] = new BLEAdvertisedDevice(advertisingDevice);
+      storedAddress[0] = myDevice->getAddress();
+      nValidDevices++;
+      
+      } else {
+        BLEAddress myad = advertisingDevice.getAddress();
+        //Terminate if address is already stored;
+        for(int i=0;i<nTags;i++){
+          if(myad.equals(storedAddress[i])){
+            return;
+          }
+        }
+        validDevices = new BLEAdvertisedDevice(advertisingDevice);
+        nValidDevices++;       
+      }
+      
+      
+    }     
+  } // Found our server
    // onResult
 }; // MyAdvertisedDeviceCallbacks
 
@@ -264,7 +266,7 @@ void setup() {
   Serial.begin(9600);
   Serial.println("Initializing...");
   isScanning=true;
-  BLEDevice::init("Anchor");
+  BLEDevice::init("ANCHOR");
   BLEScan* pBLEScan = BLEDevice::getScan();
   // Retrieve a Scanner and set the callback we want to use to be informed when we
   // have detected a new device.  Specify that we want active scanning and start the
@@ -292,21 +294,14 @@ void loop() {
     onButtonPress(WhichToPing);
     M5.Lcd.println("Button is pressed");
   } 
-
-
-  if (allConnected) {
-
-    M5.Lcd.println("All connected");
-    Serial.println("All connected");
-    String newValue = "Time since boot: " + String(millis()/1000);
-    if(isScanning==true){
-      stopScan();
+  for(int j=0;j<nTags;j++){
+    if(isThisTagConnected[j] == true){
+      Serial.printf("Tag %d is found\n",j);
     }
-    // here onwards is counter < nTags
-  } else if(isRoutineRunning == false) {
-          if(isScanning==false){startScan();}
-          startConnectRoutine();
-          
+
   }
-delay(LOOP_INTERVAL);
-}
+
+
+  delay(LOOP_INTERVAL);
+
+} 
