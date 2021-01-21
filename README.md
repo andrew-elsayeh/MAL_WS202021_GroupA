@@ -3,6 +3,10 @@
 
 This repository contains the 2 platformio projects. One for the Tags (M5StickC) and one for the Anchor (M5Stack Core)
 
+## How to run the demo
+
+      1. Flash the anchor firmware to M5Stack
+      2. Flash the tag firmware seperately, modify line 16 and 26 for each tag(0 1 2)
 
 
 ## Anchor-Tag routine description
@@ -15,7 +19,7 @@ This repository contains the 2 platformio projects. One for the Tags (M5StickC) 
 
 
 ## Getting Started 
-Prerequisits:
+Prerequisites:
 * Install git on your computer
 
 * Download Visual Studio Code and install the PlatformIO Extention
