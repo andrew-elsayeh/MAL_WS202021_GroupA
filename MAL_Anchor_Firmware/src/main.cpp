@@ -11,8 +11,10 @@
 #include <stdlib.h>
 
 #define LOOP_INTERVAL 200
-#define nTags 3
-#define SCAN_TIME 7
+
+#define nTags 3 //your number of tags here
+#define SCAN_TIME_FIRST 7
+#define SCAN_TIME_ROUTINE 3
 
 // The remote service we wish to connect to. THE TAGS HAVE TO HAVE THIS ID
 static BLEUUID serviceUUID[nTags] = {
@@ -88,13 +90,15 @@ class CounterCallback : public BLEClientCallbacks {
   void onDisconnect(BLEClient* pclient) {
     nConnectedTags +=-1;
     counter += -1;
-    isThisTagFound[AddressToID(pclient->getPeerAddress] = false;
-    Serial.println("onDisconnect, counter is now : ");
-    Serial.println(counter);
+    int getId= AddressToID(pclient->getPeerAddress());
+    isThisTagFound[getId] = false;
+    isThisTagConnected[getId] = false;
+    Serial.printf("\nonDisconnect, counter is now : %d (ID %d)",counter,getId);
     allConnected = false;
 
   }
 };
+
 
 class dummyCallback : public BLEClientCallbacks {
 
@@ -225,14 +229,15 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
 
 void startScan(){
   Serial.println("startScan() is called");
-  if(isScanning==false) { 
+  if(isScanning==false && allConnected == false) { 
+  isScanning=true;
   BLEScan* pBLEScan = BLEDevice::getScan();
   pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
   pBLEScan->setInterval(1349);
   pBLEScan->setWindow(449);
   pBLEScan->setActiveScan(true);
-  pBLEScan->start(SCAN_TIME, false);
-  isScanning=true;
+  pBLEScan->start(SCAN_TIME_ROUTINE, false);
+
   return;
   }
 }
@@ -277,7 +282,7 @@ void setup() {
   pBLEScan->setInterval(1349);
   pBLEScan->setWindow(449);
   pBLEScan->setActiveScan(true);
-  pBLEScan->start(SCAN_TIME, false);
+  pBLEScan->start(SCAN_TIME_FIRST, false);
   
 
 } // End of setup.
@@ -306,6 +311,10 @@ void loop() {
   } else if(isRoutineRunning == false) {
           if(isScanning==false){startScan();}
           startConnectRoutine();
+          if(nTick * LOOP_INTERVAL > 15 * 1000){
+            nTick=0;
+            stopScan();
+          }
           
   }
 delay(LOOP_INTERVAL);
