@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Microsystems for Assisted Living: Indoor Localization Helper
 
 This repository contains the 2 platformio projects. One for the Tags (M5StickC) and one for the Anchor (M5Stack Core)
@@ -72,7 +71,4 @@ git push origin awesome_gui
 6. This feature will only exist within this branch, to merge it with the main branch, consult with the rest of the team, as only one person should be responsible with merging.
 
 
-
-=======
->>>>>>> ble_dac_control
 
